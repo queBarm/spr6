@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 	"os"
@@ -12,28 +11,21 @@ import (
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/internal/service"
 )
 
-// IndexHandler обрабатывает GET / и возвращает HTML-страницу.
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("index.html")
-	if err != nil {
-		http.Error(w, "Failed to load template", http.StatusInternalServerError)
+func UploadHandler(w http.ResponseWriter, r *http.Request) {
+	// Проверка метода
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if err := tmpl.Execute(w, nil); err != nil {
-		http.Error(w, "Failed to render template", http.StatusInternalServerError)
-	}
-}
 
-// UploadHandler обрабатывает POST /upload, читает файл, конвертирует, сохраняет, возвращает результат.
-func UploadHandler(w http.ResponseWriter, r *http.Request) {
-	// Максимальный размер формы, например, 10MB
+	// Парсинг multipart формы (10 МБ)
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
-		http.Error(w, "Error parsing form", http.StatusInternalServerError)
+		http.Error(w, "Failed to parse multipart form", http.StatusInternalServerError)
 		return
 	}
 
-	// Получаем файл
+	// Получаем файл по имени "file"
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Failed to read uploaded file", http.StatusInternalServerError)
@@ -41,40 +33,42 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Читаем содержимое
-	data, err := io.ReadAll(file)
+	// Чтение содержимого
+	content, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file contents", http.StatusInternalServerError)
+		http.Error(w, "Failed to read file content", http.StatusInternalServerError)
 		return
 	}
 
-	// Конвертируем через service
-	result, err := service.DetectAndConvert(string(data))
+	input := string(content)
+
+	// Обработка содержимого
+	converted, err := service.DetectAndConvert(input)
 	if err != nil {
-		http.Error(w, "Failed to convert input", http.StatusInternalServerError)
+		http.Error(w, "Failed to convert content", http.StatusBadRequest)
 		return
 	}
-
-	// Формируем имя для сохранения
+	// Создание временного файла
 	ext := filepath.Ext(handler.Filename)
-	timestamp := time.Now().UTC().Format("20060102_150405")
-	outFilename := fmt.Sprintf("converted_%s%s", timestamp, ext)
+	filename := fmt.Sprintf("converted_%s%s", time.Now().UTC().Format("20060102T150405"), ext)
+	outputPath := filepath.Join(os.TempDir(), filename)
 
-	// Создаем файл
-	outFile, err := os.Create(outFilename)
+	outFile, err := os.Create(outputPath)
 	if err != nil {
 		http.Error(w, "Failed to create output file", http.StatusInternalServerError)
 		return
 	}
 	defer outFile.Close()
 
-	// Записываем результат
-	if _, err := outFile.WriteString(result); err != nil {
-		http.Error(w, "Failed to write to output file", http.StatusInternalServerError)
+	// Запись преобразованного текста в файл
+	_, err = outFile.WriteString(converted)
+	if err != nil {
+		http.Error(w, "Failed to write to file", http.StatusInternalServerError)
 		return
 	}
 
-	// Возвращаем результат клиенту
+	// Корректный порядок: сначала заголовки
 	w.Header().Set("Content-Type", "text/plain")
-	_, _ = w.Write([]byte(result))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(converted))
 }

@@ -16,7 +16,7 @@ func DetectAndConvert(input string) (string, error) {
 		return "", errors.New("input is empty")
 	}
 
-	// Простая эвристика: если строка содержит только точки, тире и пробелы — вероятно, это Морзе.
+	// Если строка содержит только точки, тире и пробелы — вероятно, это Морзе.
 	if isMorse(trimmed) {
 		return morse.ToText(trimmed), nil
 	}
