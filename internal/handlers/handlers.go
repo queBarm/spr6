@@ -28,20 +28,26 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var input string
+
+	// 1. Попробуем сначала как файл (основной путь)
 	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "Failed to read uploaded file", http.StatusBadRequest)
-		return
+	if err == nil {
+		defer file.Close()
+		content, err := io.ReadAll(file)
+		if err != nil {
+			http.Error(w, "Failed to read file content", http.StatusBadRequest)
+			return
+		}
+		input = string(content)
+	} else {
+		// 2. Попробуем как просто текстовое поле (на всякий случай)
+		input = r.FormValue("file")
+		if input == "" {
+			http.Error(w, "Failed to read uploaded file", http.StatusBadRequest)
+			return
+		}
 	}
-	defer file.Close()
-
-	content, err := io.ReadAll(file)
-	if err != nil {
-		http.Error(w, "Failed to read file content", http.StatusBadRequest)
-		return
-	}
-
-	input := string(content)
 
 	converted, err := service.DetectAndConvert(input)
 	if err != nil {
