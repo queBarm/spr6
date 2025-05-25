@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"strings"
-	"unicode"
 
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/pkg/morse"
 )
@@ -15,9 +14,9 @@ func DetectAndConvert(input string) (string, error) {
 	if trimmed == "" {
 		return "", errors.New("input is empty")
 	}
-
+	//
 	// Если строка содержит только точки, тире и пробелы — вероятно, это Морзе.
-	if isMorse(trimmed) {
+	if IsMorse(trimmed) {
 		return morse.ToText(trimmed), nil
 	}
 
@@ -26,17 +25,11 @@ func DetectAndConvert(input string) (string, error) {
 }
 
 // isMorse проверяет, является ли строка кодом Морзе.
-func isMorse(s string) bool {
-	for _, r := range s {
-		switch r {
-		case '.', '-', ' ', '\t', '\n', '\r':
-			// допустимые символы в морзе
-		default:
-			if !unicode.IsSpace(r) {
-				return false
-			}
+func IsMorse(s string) bool {
+	for _, ch := range s {
+		if !(ch == '.' || ch == '-' || ch == ' ' || ch == '\n') {
+			return false
 		}
 	}
 	return true
-
 }

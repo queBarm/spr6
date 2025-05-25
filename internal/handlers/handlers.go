@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/internal/service"
+	"github.com/Yandex-Practicum/go1fl-sprint6-final/pkg/morse"
 )
 
 // IndexHandler обрабатывает GET / и возвращает HTML-страницу.
@@ -22,40 +23,41 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 // UploadHandler обрабатывает POST /upload и возвращает конвертированный результат.
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(10 << 20) // 10MB
-	if err != nil {
-		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+	// Ограничиваем только POST
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var input string
+	// Чтение файла из формы
+	file, _, err := r.FormFile("myFile")
+	if err != nil {
+		http.Error(w, "Failed to read uploaded file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
 
-	// 1. Попробуем сначала как файл (основной путь)
-	file, _, err := r.FormFile("file")
-	if err == nil {
-		defer file.Close()
-		content, err := io.ReadAll(file)
-		if err != nil {
-			http.Error(w, "Failed to read file content", http.StatusBadRequest)
-			return
-		}
-		input = string(content)
+	// Считываем содержимое файла
+	content, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read uploaded file", http.StatusBadRequest)
+		return
+	}
+
+	input := string(content)
+
+	// Определяем тип содержимого (морзе или текст)
+	isMorse := service.IsMorse(input)
+
+	var result string
+	if isMorse {
+		result = morse.ToText(input)
 	} else {
-		// 2. Попробуем как просто текстовое поле (на всякий случай)
-		input = r.FormValue("file")
-		if input == "" {
-			http.Error(w, "Failed to read uploaded file", http.StatusBadRequest)
-			return
-		}
+		result = morse.ToMorse(input)
 	}
 
-	converted, err := service.DetectAndConvert(input)
-	if err != nil {
-		http.Error(w, "Failed to convert content", http.StatusBadRequest)
-		return
-	}
-
+	// Возвращаем результат
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(converted))
+	w.Write([]byte(result))
 }
