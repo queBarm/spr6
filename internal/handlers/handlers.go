@@ -22,12 +22,11 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 // UploadHandler обрабатывает POST /upload и возвращает конвертированный результат.
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	err := r.ParseMultipartForm(10 << 20) // 10MB
+	if err != nil {
+		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
 		return
 	}
-
-	// НЕ вызывать r.ParseMultipartForm — FormFile сам это делает
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -38,7 +37,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	content, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file content", http.StatusInternalServerError)
+		http.Error(w, "Failed to read file content", http.StatusBadRequest)
 		return
 	}
 
