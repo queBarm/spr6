@@ -38,4 +38,5 @@ func isMorse(s string) bool {
 		}
 	}
 	return true
+
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"os"
@@ -11,6 +12,17 @@ import (
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/internal/service"
 )
 
+// IndexHandler обрабатывает GET / и возвращает HTML-страницу.
+func IndexHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("index.html")
+	if err != nil {
+		http.Error(w, "Failed to load template", http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.Execute(w, nil); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+	}
+}
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Проверка метода
 	if r.Method != http.MethodPost {
