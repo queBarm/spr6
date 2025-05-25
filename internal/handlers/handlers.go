@@ -27,11 +27,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := r.ParseMultipartForm(10 << 20) // 10 МБ
-	if err != nil {
-		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
-		return
-	}
+	// НЕ вызывать r.ParseMultipartForm — FormFile сам это делает
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
