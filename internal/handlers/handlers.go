@@ -1,24 +1,16 @@
 package handlers
 
 import (
-	"html/template"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/internal/service"
-	"github.com/Yandex-Practicum/go1fl-sprint6-final/pkg/morse"
 )
 
 // IndexHandler обрабатывает GET / и возвращает HTML-страницу.
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("index.html")
-	if err != nil {
-		http.Error(w, "Failed to load template", http.StatusInternalServerError)
-		return
-	}
-	if err := tmpl.Execute(w, nil); err != nil {
-		http.Error(w, "Failed to render template", http.StatusInternalServerError)
-	}
+	http.ServeFile(w, r, "index.html")
 }
 
 // UploadHandler обрабатывает POST /upload и возвращает конвертированный результат.
@@ -47,17 +39,16 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	input := string(content)
 
 	// Определяем тип содержимого (морзе или текст)
-	isMorse := service.IsMorse(input)
-
-	var result string
-	if isMorse {
-		result = morse.ToText(input)
-	} else {
-		result = morse.ToMorse(input)
+	result, err := service.DetectAndConvert(input)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Возвращаем результат
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(result))
+	if _, err := w.Write([]byte(result)); err != nil {
+		log.Printf("Write respone error: %v", err)
+	}
 }

@@ -26,10 +26,7 @@ func DetectAndConvert(input string) (string, error) {
 
 // isMorse проверяет, является ли строка кодом Морзе.
 func IsMorse(s string) bool {
-	for _, ch := range s {
-		if !(ch == '.' || ch == '-' || ch == ' ' || ch == '\n') {
-			return false
-		}
-	}
-	return true
+	return !strings.ContainsFunc(s, func(r rune) bool {
+		return !(r == '.' || r == '-' || r == ' ' || r == '\n')
+	})
 }
